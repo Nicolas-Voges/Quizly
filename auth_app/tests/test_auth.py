@@ -18,8 +18,8 @@ class RegisterTests(APITestCase):
     
 
     def setUp(self):
-        self.username = 'TEST_USER'
-        self.email = 'TEST@USER.de'
+        self.username = 'test_user'
+        self.email = 'test@user.de'
         self.User = get_user_model()
         self.url = reverse('register')
         self.user = self.User.objects.create_user(username=self.username, email=self.email, password='TEST1234')

@@ -1,0 +1,45 @@
+# Byte-compiled / cache / logs
+__pycache__/
+*.py[cod]
+*.log
+*.pot
+
+# Virtual environment
+env/
+venv/
+ENV/
+*.env
+
+# Django migrations (optional, je nach Team-Konvention)
+*/migrations/__pycache__/
+*/migrations/*.pyc
+# */migrations/*.py  ← entfernen, wenn du Migrationsdateien versionieren willst!
+
+# Database
+db.sqlite3
+*.sqlite3
+
+# VS Code settings
+.vscode/
+
+# macOS & Windows system files
+.DS_Store
+Thumbs.db
+
+# Python env files (Secrets, API keys etc.)
+.env
+
+# pip-tools
+*.lock
+
+# Pytest
+.pytest_cache/
+
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
+
+# Static/Media files (falls automatisch generiert)
+staticfiles/
+media/

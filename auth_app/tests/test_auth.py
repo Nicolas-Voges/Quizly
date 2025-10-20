@@ -83,3 +83,38 @@ class LoginTests(APITestCase):
                 self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
                 self.assertNotIn('access_token', response.cookies)
                 self.assertNotIn('refresh_token', response.cookies)
+
+
+class TokenRefreshTests(APITestCase):
+
+    def setUp(self):
+        self.username = 'test_user'
+        self.password = 'test1234'
+        self.User = get_user_model()
+        self.user = self.User.objects.create_user(username=self.username, password=self.password)
+        self.login_url = reverse('token_obtain_pair')
+        self.refresh_url = reverse('token_refresh')
+
+
+    def test_post_success(self):
+        login_response = self.client.post(self.login_url, {'username': self.username, 'password': self.password}, format='json')
+        self.refresh_token = login_response.cookies.get('refresh_token').value
+        response = self.client.post(self.refresh_url, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('access', response.data)
+    
+
+    def test_post_fails_no_cookie(self):
+        response = self.client.post(self.refresh_url, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['detail'], 'Refresh token not provided.')
+
+
+    def test_post_fails_invalid_token(self):
+        self.client.cookies['refresh_token'] = 'invalid_token'
+        response = self.client.post(self.refresh_url, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['detail'], 'Invalid refresh token.')

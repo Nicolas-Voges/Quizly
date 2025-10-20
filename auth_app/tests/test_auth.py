@@ -66,8 +66,8 @@ class LoginTests(APITestCase):
         response = self.client.post(self.url, data, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('access', response.cookies)
-        self.assertIn('refresh', response.cookies)
+        self.assertIn('access_token', response.cookies)
+        self.assertIn('refresh_token', response.cookies)
 
 
     def test_post_fails(self):
@@ -81,5 +81,5 @@ class LoginTests(APITestCase):
                 response = self.client.post(self.url, data, format='json')
 
                 self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-                self.assertNotIn('access', response.cookies)
-                self.assertNotIn('refresh', response.cookies)
+                self.assertNotIn('access_token', response.cookies)
+                self.assertNotIn('refresh_token', response.cookies)

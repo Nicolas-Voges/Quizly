@@ -1,9 +1,13 @@
 from django.contrib.auth.models import User
+
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenBlacklistView
+from rest_framework_simplejwt.serializers import TokenBlacklistSerializer
+from rest_framework.exceptions import AuthenticationFailed
+
 from .serializers import RegistrationSerializer
 
 class RegistrationAPIView(APIView):
@@ -68,7 +72,7 @@ class AccessTokenRefreshView(TokenRefreshView):
         if refresh_token is None:
             return Response(
                 {'detail': 'Refresh token not provided.'},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_401_UNAUTHORIZED
             )
         
         serializer = self.get_serializer(data={'refresh': refresh_token})
@@ -93,4 +97,20 @@ class AccessTokenRefreshView(TokenRefreshView):
             samesite='Lax'
         )
 
+        return response
+    
+
+class LogoutTokenBlacklistView(TokenBlacklistView):
+    def get_serializer(self, *args, **kwargs):
+        refresh_token = self.request.COOKIES.get('refresh_token')
+        if refresh_token is None:
+            raise AuthenticationFailed("Not authenticated.")
+        kwargs['data'] = {'refresh': refresh_token}
+        return TokenBlacklistSerializer(*args, **kwargs)
+    
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        response.delete_cookie('access_token')
+        response.delete_cookie('refresh_token')
+        response.data = {'detail': "Log-Out successfully! All Tokens will be deleted. Refresh token is now invalid."}
         return response

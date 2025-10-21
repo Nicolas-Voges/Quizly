@@ -14,7 +14,9 @@ class QuizTests(APITestCase):
 
     def setUp(self):
         self.video_url = "https://www.youtube.com/watch?v=P8zzrqLEvoI"
+        self.video_url_2 = "https://youtu.be/P8zzrqLEvoI?si=TsYQwovhCbhqNkr7"
         self.post_data = {'video_url': self.video_url}
+        self.post_data_2 = {'video_url': self.video_url_2}
         self.user = User.objects.create_user(username="username", email="te@st.mail", password='TEST1234')
         self.quiz = Quiz.objects.create(
             title="Sample Quiz",
@@ -40,12 +42,12 @@ class QuizTests(APITestCase):
         self.expected_fields = {'id', 'title', 'description', 'created_at', 'updated_at', 'video_url', 'questions'}
 
     def test_post_success(self):
-        self.client.post(self.url_login, {'username': 'username', 'password': 'TEST1234'}, format='json')
-        response = self.client.post(self.url_create, self.post_data, format='json')
+        for post_data in [self.post_data, self.post_data_2]:
+            self.client.post(self.url_login, {'username': 'username', 'password': 'TEST1234'}, format='json')
+            response = self.client.post(self.url_create, post_data, format='json')
 
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(set(response.data.keys()), self.expected_fields)
-        self.assertTrue(Quiz.objects.filter(title=self.post_data['title']).exists())
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            self.assertEqual(set(response.data.keys()), self.expected_fields)
 
 
     def test_post_fails(self):

@@ -97,8 +97,8 @@ class TokenRefreshTests(APITestCase):
 
 
     def test_post_success(self):
-        login_response = self.client.post(self.login_url, {'username': self.username, 'password': self.password}, format='json')
-        self.refresh_token = login_response.cookies.get('refresh_token').value
+        self.client.post(self.login_url, {'username': self.username, 'password': self.password}, format='json')
+
         response = self.client.post(self.refresh_url, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -132,8 +132,7 @@ class LogoutTests(APITestCase):
 
 
     def test_post_success(self):
-        login_response = self.client.post(self.login_url, {'username': self.username, 'password': self.password}, format='json')
-        self.refresh_token = login_response.cookies.get('refresh_token').value
+        self.client.post(self.login_url, {'username': self.username, 'password': self.password}, format='json')
 
         response = self.client.post(self.logout_url, format='json')
 

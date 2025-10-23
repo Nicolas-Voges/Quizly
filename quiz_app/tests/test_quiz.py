@@ -1,3 +1,10 @@
+"""Tests for the quiz app API.
+
+The tests exercise quiz creation (from YouTube URLs), listing,
+retrieval, update and deletion, ensuring that only the quiz owner has
+access to modify or delete a quiz.
+"""
+
 from unittest.mock import patch
 from anyio import Path
 from pathlib import Path
@@ -13,14 +20,17 @@ from quiz_app.models import Quiz, Question
 
 User = get_user_model()
 
-class QuizTests(APITestCase):
 
+class QuizTests(APITestCase):
+    """Test suite for quiz creation and management endpoints."""
 
     def get_url_detail(self, pk):
+        """Return the detail URL for a quiz with primary key ``pk``."""
         return reverse('quizzes-detail', kwargs={'pk': pk})
 
 
     def setUp(self):
+        """Prepare common test data and objects."""
         self.video_url = "https://www.youtube.com/watch?v=_dQYvRM9zNY"
         self.video_url_2 = "https://youtu.be/_dQYvRM9zNY?si=mCT_gsc0qQmdgPpp"
         self.post_data = {'url': self.video_url}
@@ -51,6 +61,7 @@ class QuizTests(APITestCase):
 
 
     def login(self, user=None):
+        """Authenticate the test client as ``user`` (defaults to test user)."""
         if user is None:
             user = self.user
         login_response = self.client.post(self.url_login, {'username': user.username, 'password': 'TEST1234'}, format='json')
@@ -58,6 +69,7 @@ class QuizTests(APITestCase):
 
 
     def tearDown(self):
+        """Remove any temporary audio file created during tests."""
         audio_path = Path(settings.BASE_DIR) / 'media' / 'audio.m4a'
         if audio_path.exists():
             audio_path.unlink()
@@ -67,6 +79,7 @@ class QuizTests(APITestCase):
     @patch('quiz_app.api.views.CreateQuizAPIView.transcribe_audio')
     @patch('quiz_app.api.views.CreateQuizAPIView.generate_quiz_json')
     def test_post_success(self, mock_generate_quiz_json, mock_transcribe_audio, mock_download_audio):
+        """Posting a valid URL should create a quiz and return 201."""
         mock_download_audio.return_value = None
         mock_download_audio.side_effect = lambda url, filename: open(filename, 'wb').close()
         mock_transcribe_audio.return_value = {"text": "Sample transcript text."}
@@ -90,6 +103,7 @@ class QuizTests(APITestCase):
 
 
     def test_post_fails(self):
+        """Invalid URL or unauthenticated requests should be rejected."""
         data = {"video_url": "invalid_url"}
 
         response = self.client.post(self.url_create, data, format='json')
@@ -101,6 +115,7 @@ class QuizTests(APITestCase):
 
 
     def test_get_list_success(self):
+        """Authenticated users should receive a list of their quizzes."""
         self.login()
         response = self.client.get(self.url_list, format='json')
 
@@ -113,11 +128,13 @@ class QuizTests(APITestCase):
 
 
     def test_get_list_fails(self):
+        """Unauthenticated clients must not access the quizzes list."""
         response = self.client.get(self.url_list, format='json')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
     def test_get_detail_success(self):
+        """Retrieve a single quiz by its id (authenticated owner)."""
         self.login()
         response = self.client.get(self.get_url_detail(self.quiz.pk), format='json')
 
@@ -131,6 +148,7 @@ class QuizTests(APITestCase):
 
 
     def test_get_detail_fails(self):
+        """Various failing cases for retrieving quiz details."""
         cases = [
             ('non-existent quiz', self.user, 9999, status.HTTP_404_NOT_FOUND),
             ('unauthenticated access', None, self.quiz.pk, status.HTTP_401_UNAUTHORIZED),
@@ -149,6 +167,7 @@ class QuizTests(APITestCase):
 
 
     def test_patch_detail_success(self):
+        """Patching a quiz as the owner updates the allowed fields."""
         self.login()
         updated_data = {
             "title": "Updated Quiz Title",
@@ -162,6 +181,7 @@ class QuizTests(APITestCase):
 
 
     def test_patch_detail_fails(self):
+        """Various failing cases when attempting to patch a quiz."""
         cases = [
             ('invalid data', self.user, self.quiz.pk, {"title": ""}, status.HTTP_400_BAD_REQUEST),
             ('unauthenticated access', None, self.quiz.pk, {"title": "New Title"}, status.HTTP_401_UNAUTHORIZED),
@@ -181,6 +201,7 @@ class QuizTests(APITestCase):
 
 
     def test_delete_detail(self):
+        """Deletion behavior for owners, non-owners and unauthenticated clients."""
         cases = [
             ('unauthenticated access', None, status.HTTP_401_UNAUTHORIZED),
             ('access by non-creator', self.user_2, status.HTTP_403_FORBIDDEN),

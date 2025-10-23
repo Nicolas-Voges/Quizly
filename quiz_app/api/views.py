@@ -1,3 +1,10 @@
+"""Views for quiz-related API endpoints.
+
+This module exposes an endpoint to create a quiz (from a YouTube
+URL) and standard DRF generic views to list, retrieve, update and
+delete quizzes that belong to the authenticated user.
+"""
+
 from rest_framework.views import APIView
 from rest_framework.viewsets import generics
 from rest_framework.response import Response
@@ -15,79 +22,88 @@ from rest_framework.permissions import IsAuthenticated
 from .permissions import IsCreator
 
 class CreateQuizAPIView(APIView):
+    """Create a quiz resource from a YouTube URL.
+
+    The view downloads audio, transcribes it and constructs quiz
+    content via a language model. Helper methods raise exceptions on
+    failure and the view returns appropriate HTTP responses.
+    """
+
     permission_classes = [IsAuthenticated]
 
     def download_audio(self, url, tmp_filename):
+        """Download audio from YouTube to a temporary file.
+
+        This helper writes audio to ``tmp_filename``. It raises on
+        failure so the calling view can convert the exception into an
+        HTTP response.
+        """
+
         ydl_opts = {
             "format": "bestaudio/best",
             "outtmpl": tmp_filename,
             "quiet": True,
             "noplaylist": True,
         }
-
-        try:
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                ydl.download([url])
-        except Exception as e:
-            return Response({"error": f"Error during download: {str(e)}"}, status=500)
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([url])
         
 
     def transcribe_audio(self, tmp_filename):
-        try:
-            model = whisper.load_model("tiny", device="cuda" if os.getenv("WHISPER_USE_CUDA") == "1" else "cpu")
-            result = model.transcribe(tmp_filename)
-            return result["text"]
-        except Exception as e:
-            os.remove(tmp_filename)
-            return Response({"error": f"Error during transcription: {str(e)}"}, status=500)
+        """Transcribe the audio file and return the transcript text."""
+        model = whisper.load_model("tiny", device="cuda" if os.getenv("WHISPER_USE_CUDA") == "1" else "cpu")
+        result = model.transcribe(tmp_filename)
+        return result["text"]
         
 
     def generate_quiz_json(self, transcript_text):
-        try:
-            client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+                """Use a language model to produce a quiz JSON from transcript_text.
 
-            prompt = f"""
-            Based on the following transcript, generate a quiz in valid JSON format.
+                Returns a Python dict parsed from the model output.
+                """
+                client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-            The quiz must follow this exact structure:
+                prompt = f"""
+                        Based on the following transcript, generate a quiz in valid JSON format.
 
-            {{
-              "title": "Create a concise quiz title based on the topic of the transcript.",
-              "description": "Summarize the transcript in no more than 150 characters. Do not include any quiz questions or answers.",
-              "questions": [
-                {{
-                  "question_title": "The question goes here.",
-                  "question_options": ["Option A", "Option B", "Option C", "Option D"],
-                  "answer": "The correct answer from the above options"
-                }},
-                ...
-                (exactly 10 questions)
-              ]
-            }}
+                        The quiz must follow this exact structure:
 
-            Requirements:
-            - Each question must have exactly 4 distinct answer options.
-            - Only one correct answer is allowed per question, and it must be present in 'question_options'.
-            - The output must be valid JSON and parsable as-is (e.g., using Python's json.loads).
-            - Do not include explanations, comments, or any text outside the JSON
-            ---
-            {transcript_text}
-            ---
-            """
+                        {{
+                            "title": "Create a concise quiz title based on the topic of the transcript.",
+                            "description": "Summarize the transcript in no more than 150 characters. Do not include any quiz questions or answers.",
+                            "questions": [
+                                {{
+                                    "question_title": "The question goes here.",
+                                    "question_options": ["Option A", "Option B", "Option C", "Option D"],
+                                    "answer": "The correct answer from the above options"
+                                }},
+                                ...
+                                (exactly 10 questions)
+                            ]
+                        }}
 
-            response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=prompt
-            )
+                        Requirements:
+                        - Each question must have exactly 4 distinct answer options.
+                        - Only one correct answer is allowed per question, and it must be present in 'question_options'.
+                        - The output must be valid JSON and parsable as-is (e.g., using Python's json.loads).
+                        - Do not include explanations, comments, or any text outside the JSON
+                        ---
+                        {transcript_text}
+                        ---
+                        """
 
-            raw_text = response.text
-            cleaned_text = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw_text.strip(), flags=re.MULTILINE)
-            return json.loads(cleaned_text)
-        except Exception as e:
-            return Response({"error": f"Fehler bei der Quiz-Erstellung: {str(e)}"}, status=500)
+                response = client.models.generate_content(
+                        model="gemini-2.5-flash",
+                        contents=prompt
+                )
+
+                raw_text = response.text
+                cleaned_text = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw_text.strip(), flags=re.MULTILINE)
+                return json.loads(cleaned_text)
     
 
     def post(self, request):
+        """Create the quiz resource and its related Question objects."""
         serializer = QuizPostSerializer(data=request.data)
 
         if not serializer.is_valid():

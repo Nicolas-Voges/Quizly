@@ -16,9 +16,8 @@ User = get_user_model()
 class QuizTests(APITestCase):
 
 
-    def login(self):
-        login_response = self.client.post(self.url_login, {'username': 'username', 'password': 'TEST1234'}, format='json')
-        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + login_response.cookies.get('access_token').value)
+    def get_url_detail(self, pk):
+        return reverse('quizzes-detail', kwargs={'pk': pk})
 
 
     def setUp(self):
@@ -27,6 +26,7 @@ class QuizTests(APITestCase):
         self.post_data = {'url': self.video_url}
         self.post_data_2 = {'url': self.video_url_2}
         self.user = User.objects.create_user(username="username", email="te@st.mail", password='TEST1234')
+        self.user_2 = User.objects.create_user(username="username", email="te@st.mail_2", password='TEST1234')
         self.quiz = Quiz.objects.create(
             title="Sample Quiz",
             description="A simple quiz for testing.",
@@ -47,8 +47,14 @@ class QuizTests(APITestCase):
         self.url_login = reverse('token_obtain_pair')
         self.url_list = reverse('quizzes-list')
         self.url_create = reverse('create-quiz')
-        self.url_detail = reverse('quizzes-detail', kwargs={'pk': self.quiz.pk})
         self.expected_fields = {'id', 'title', 'description', 'created_at', 'updated_at', 'video_url', 'questions'}
+
+
+    def login(self, user=None):
+        if user is None:
+            user = self.user
+        login_response = self.client.post(self.url_login, {'username': user.username, 'password': 'TEST1234'}, format='json')
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + login_response.cookies.get('access_token').value)
 
 
     def tearDown(self):
@@ -92,3 +98,19 @@ class QuizTests(APITestCase):
         self.login()
         response = self.client.post(self.url_create, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+    def test_get_list_success(self):
+        self.login()
+        response = self.client.get(self.url_list, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsInstance(response.data, list)
+        for quiz in response.data:
+            self.assertEqual(set(quiz.keys()), self.expected_fields)
+            self.assertEqual(quiz['creator'], self.user.id)
+
+
+    def test_get_list_fails(self):
+        response = self.client.get(self.url_list, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

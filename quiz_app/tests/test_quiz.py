@@ -114,3 +114,31 @@ class QuizTests(APITestCase):
     def test_get_list_fails(self):
         response = self.client.get(self.url_list, format='json')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+    def test_get_detail_success(self):
+        self.login()
+        response = self.client.get(self.get_url_detail(self.quiz.pk), format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(set(response.data.keys()), self.expected_fields)
+        self.assertEqual(response.data['id'], self.quiz.id)
+        self.assertEqual(response.data['title'], self.quiz.title)
+        self.assertEqual(response.data['description'], self.quiz.description)
+        self.assertEqual(response.data['video_url'], self.quiz.video_url)
+        self.assertEqual(len(response.data['questions']), len(self.questions))
+
+
+    def test_get_detail_fails(self):
+        cases = [
+            ('non-existent quiz', self.user, 9999, status.HTTP_404_NOT_FOUND),
+            ('unauthenticated access', None, self.quiz.pk, status.HTTP_401_UNAUTHORIZED),
+            ('access by non-creator', self.user_2, self.quiz.pk, status.HTTP_403_FORBIDDEN)
+        ]
+
+        for desc, login, pk, status_code in cases:
+            if login:
+                self.login(user=login)
+            response = self.client.get(self.get_url_detail(pk), format='json')
+
+            self.assertEqual(response.status_code, status_code, msg=f"Failed on case: {desc}")

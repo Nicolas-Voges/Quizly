@@ -171,3 +171,18 @@ class QuizTests(APITestCase):
             response = self.client.patch(self.get_url_detail(pk), data, format='json')
 
             self.assertEqual(response.status_code, status_code, msg=f"Failed on case: {desc}")
+
+
+    def test_delete_detail(self):
+        cases = [
+            ('unauthenticated access', None, status.HTTP_401_UNAUTHORIZED),
+            ('access by non-creator', self.user_2, status.HTTP_403_FORBIDDEN),
+            ('successful deletion', self.user, status.HTTP_204_NO_CONTENT),
+            ('deletion of non-existent quiz', self.user, status.HTTP_404_NOT_FOUND)
+        ]
+        for desc, login, status_code in cases:
+            if login:
+                self.login(user=login)
+            response = self.client.delete(self.get_url_detail(self.quiz.pk), format='json')
+
+            self.assertEqual(response.status_code, status_code, msg=f"Failed on case: {desc}")

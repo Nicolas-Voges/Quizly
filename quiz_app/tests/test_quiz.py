@@ -57,9 +57,9 @@ class QuizTests(APITestCase):
             audio_path.unlink()
 
 
-    @patch('quiz_app.api.views.CreateQuizView.download_audio')
-    @patch('quiz_app.api.views.CreateQuizView.transcribe_audio')
-    @patch('quiz_app.api.views.CreateQuizView.generate_quiz_json')
+    @patch('quiz_app.api.views.CreateQuizAPIView.download_audio')
+    @patch('quiz_app.api.views.CreateQuizAPIView.transcribe_audio')
+    @patch('quiz_app.api.views.CreateQuizAPIView.generate_quiz_json')
     def test_post_success(self, mock_generate_quiz_json, mock_transcribe_audio, mock_download_audio):
         mock_download_audio.return_value = None
         mock_download_audio.side_effect = lambda url, filename: open(filename, 'wb').close()

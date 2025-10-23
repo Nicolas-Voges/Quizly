@@ -70,3 +70,47 @@ class QuizPostSerializer(serializers.ModelSerializer):
             return f"https://www.youtube.com/watch?v={video_id}"
         else:
             raise serializers.ValidationError("Invalid YouTube URL")
+        
+
+class QuizSerializer(serializers.ModelSerializer):
+    created_at = serializers.SerializerMethodField()
+    updated_at = serializers.SerializerMethodField()
+    questions = QuestionSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Quiz
+        fields = [
+            'id',
+            'title',
+            'description',
+            'created_at',
+            'updated_at',
+            'video_url',
+            'questions'
+        ]
+        read_only_fields = [
+            'id',
+            'created_at',
+            'updated_at',
+            'video_url',
+            'questions'
+        ]
+
+
+    def format_datetime(self, dt):
+        return dt.strftime("%Y-%m-%dT%H:%M:%S.") + f"{int(dt.microsecond / 1000):03d}Z"
+
+
+    def get_created_at(self, obj):
+        return self.format_datetime(obj.created_at)
+    
+
+    def get_updated_at(self, obj):
+        return self.format_datetime(obj.updated_at)
+    
+
+    def update(self, instance, validated_data):
+        instance.title = validated_data.get('title', instance.title)
+        instance.description = validated_data.get('description', instance.description)
+        instance.save()
+        return instance

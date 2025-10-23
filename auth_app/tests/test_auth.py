@@ -58,6 +58,7 @@ class LoginTests(APITestCase):
         self.user = self.User.objects.create_user(username=self.username, password=self.password)
         self.url = reverse('token_obtain_pair')
 
+
     def test_post_success(self):
         data = {
             'username': self.username,

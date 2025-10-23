@@ -26,7 +26,7 @@ class QuizTests(APITestCase):
         self.post_data = {'url': self.video_url}
         self.post_data_2 = {'url': self.video_url_2}
         self.user = User.objects.create_user(username="username", email="te@st.mail", password='TEST1234')
-        self.user_2 = User.objects.create_user(username="username", email="te@st.mail_2", password='TEST1234')
+        self.user_2 = User.objects.create_user(username="username_2", email="te@st.mail_2", password='TEST1234')
         self.quiz = Quiz.objects.create(
             title="Sample Quiz",
             description="A simple quiz for testing.",
@@ -108,7 +108,8 @@ class QuizTests(APITestCase):
         self.assertIsInstance(response.data, list)
         for quiz in response.data:
             self.assertEqual(set(quiz.keys()), self.expected_fields)
-            self.assertEqual(quiz['creator'], self.user.id)
+            quiz_instance = Quiz.objects.get(id=quiz['id'])
+            self.assertEqual(quiz_instance.creator.id, self.user.id)
 
 
     def test_get_list_fails(self):
@@ -138,7 +139,10 @@ class QuizTests(APITestCase):
 
         for desc, login, pk, status_code in cases:
             if login:
+                self.client.logout()
                 self.login(user=login)
+            else:
+                self.client.logout()
             response = self.client.get(self.get_url_detail(pk), format='json')
 
             self.assertEqual(response.status_code, status_code, msg=f"Failed on case: {desc}")
@@ -167,7 +171,10 @@ class QuizTests(APITestCase):
 
         for desc, login, pk, data, status_code in cases:
             if login:
+                self.client.logout()
                 self.login(user=login)
+            else:
+                self.client.logout()
             response = self.client.patch(self.get_url_detail(pk), data, format='json')
 
             self.assertEqual(response.status_code, status_code, msg=f"Failed on case: {desc}")

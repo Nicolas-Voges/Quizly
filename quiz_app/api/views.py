@@ -1,7 +1,8 @@
 from rest_framework.views import APIView
+from rest_framework.viewsets import generics
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import QuizPostSerializer
+from .serializers import QuizPostSerializer, QuizSerializer
 from quiz_app.models import Quiz, Question
 from pathlib import Path
 import yt_dlp
@@ -11,6 +12,7 @@ import whisper
 from google import genai
 import json
 from rest_framework.permissions import IsAuthenticated
+from .permissions import IsCreator
 
 class CreateQuizAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -83,7 +85,7 @@ class CreateQuizAPIView(APIView):
             return json.loads(cleaned_text)
         except Exception as e:
             return Response({"error": f"Fehler bei der Quiz-Erstellung: {str(e)}"}, status=500)
-
+    
 
     def post(self, request):
         serializer = QuizPostSerializer(data=request.data)
@@ -122,3 +124,30 @@ class CreateQuizAPIView(APIView):
             )
 
         return Response(QuizPostSerializer(quiz).data, status=status.HTTP_201_CREATED)
+    
+
+class QuizListAPIView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = QuizSerializer
+    queryset = Quiz.objects.all()
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        return queryset.filter(creator=self.request.user)
+   
+
+class QuizRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAuthenticated, IsCreator]
+    serializer_class = QuizSerializer
+    queryset = Quiz.objects.all()
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        return queryset.filter(creator=self.request.user)
+    
+
+    def get_object(self):
+        pk = self.kwargs.get("pk")
+        obj = generics.get_object_or_404(Quiz, pk=pk)
+        self.check_object_permissions(self.request, obj)
+        return obj

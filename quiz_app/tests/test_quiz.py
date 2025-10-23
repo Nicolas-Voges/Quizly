@@ -142,3 +142,32 @@ class QuizTests(APITestCase):
             response = self.client.get(self.get_url_detail(pk), format='json')
 
             self.assertEqual(response.status_code, status_code, msg=f"Failed on case: {desc}")
+
+
+    def test_patch_detail_success(self):
+        self.login()
+        updated_data = {
+            "title": "Updated Quiz Title",
+            "description": "Updated Quiz Description"
+        }
+        response = self.client.patch(self.get_url_detail(self.quiz.pk), updated_data, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['title'], updated_data['title'])
+        self.assertEqual(response.data['description'], updated_data['description'])
+
+
+    def test_patch_detail_fails(self):
+        cases = [
+            ('invalid data', self.user, self.quiz.pk, {"title": ""}, status.HTTP_400_BAD_REQUEST),
+            ('unauthenticated access', None, self.quiz.pk, {"title": "New Title"}, status.HTTP_401_UNAUTHORIZED),
+            ('access by non-creator', self.user_2, self.quiz.pk, {"title": "New Title"}, status.HTTP_403_FORBIDDEN),
+            ('non-existent quiz', self.user, 9999, {"title": "New Title"}, status.HTTP_404_NOT_FOUND)
+        ]
+
+        for desc, login, pk, data, status_code in cases:
+            if login:
+                self.login(user=login)
+            response = self.client.patch(self.get_url_detail(pk), data, format='json')
+
+            self.assertEqual(response.status_code, status_code, msg=f"Failed on case: {desc}")

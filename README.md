@@ -9,6 +9,16 @@ Small Django + DRF project for creating and managing quizzes. Features:
 Important: ffmpeg must be installed and available in PATH before setting up
 the project — yt-dlp and Whisper require ffmpeg for audio processing.
 
+Installation checklist
+1. Ensure ffmpeg is installed and on PATH (see below).
+2. Create and use the virtualenv in the project root: `python -m venv env`.
+3. Install dependencies: `(env) python -m pip install -r requirements.txt`.
+4. Apply migrations: `(env) python manage.py migrate`.
+5. Start server: `(env) python manage.py runserver`.
+6. If using the frontend from a different origin (e.g. Live Server at :5500), add that origin to CORS (see CORS section).
+
+CORS: see the "CORS" section below for the minimal steps.
+
 This README contains:
 
 - ffmpeg installation instructions (Windows / macOS / Linux)
@@ -147,5 +157,14 @@ python manage.py test
 - `ModuleNotFoundError: No module named 'django'` → venv not activated. Use the venv python or activate the environment.
 - `Activate.ps1` blocked → temporarily set PowerShell execution policy: `Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned` or use the venv python directly.
 - `ffmpeg` not found → check `ffmpeg -version` and PATH. On Windows: ensure `ffmpeg\bin` is in PATH.
+
+## CORS (Cross-Origin Resource Sharing)
+
+Note: `django-cors-headers` is included in `requirements.txt` for this project.
+
+Make sure your frontend origin (e.g. `http://127.0.0.1:5500`) is listed in
+`CORS_ALLOWED_ORIGINS` and `CORS_ALLOW_CREDENTIALS = True` is set in
+`core/settings.py`, then restart the dev server. From the frontend send
+requests with credentials (`credentials: 'include'` / `withCredentials: true`) when using cookies.
 
 ---

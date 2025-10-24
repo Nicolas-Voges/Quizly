@@ -143,26 +143,59 @@ class CreateQuizAPIView(APIView):
     
 
 class QuizListAPIView(generics.ListAPIView):
+    """List quizzes for the authenticated user.
+
+    GET: Return a list of quizzes owned by the requesting user. The
+    view uses the default pagination and serialization defined by DRF and
+    the local serializer class.
+    """
+
     permission_classes = [IsAuthenticated]
     serializer_class = QuizSerializer
     queryset = Quiz.objects.all()
 
     def get_queryset(self):
+        """Return queryset filtered to the current user.
+
+        Ensures users only see their own quizzes.
+        """
+
         queryset = super().get_queryset()
         return queryset.filter(creator=self.request.user)
    
 
 class QuizRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
+    """Retrieve, update or delete a quiz owned by the requester.
+
+    GET: return quiz details
+    PUT/PATCH: update quiz fields (only allowed for the creator)
+    DELETE: remove the quiz (only allowed for the creator)
+
+    Object-level permissions are enforced by :class:`IsCreator`.
+    """
+
     permission_classes = [IsAuthenticated, IsCreator]
     serializer_class = QuizSerializer
     queryset = Quiz.objects.all()
 
     def get_queryset(self):
+        """Return queryset limited to quizzes owned by the requester.
+
+        Ensures object-level views operate only on the requesting user's
+        quiz objects.
+        """
+
         queryset = super().get_queryset()
         return queryset.filter(creator=self.request.user)
     
 
     def get_object(self):
+        """Retrieve the object by primary key and enforce permissions.
+
+        Uses ``get_object_or_404`` and then runs the usual DRF permission
+        checks for object-level access.
+        """
+
         pk = self.kwargs.get("pk")
         obj = generics.get_object_or_404(Quiz, pk=pk)
         self.check_object_permissions(self.request, obj)

@@ -98,8 +98,8 @@ class LoginTests(APITestCase):
     def test_post_fails(self):
         """Invalid credentials must not set token cookies and return 401."""
         cases = [
-            ("wrong_username", {'username': self.username, 'password': 'wrong_password'}),
-            ("wrong_password", {'username': 'wrong', 'password': self.password})
+            ("wrong_password", {'username': self.username, 'password': 'wrong_password'}),
+            ("wrong_username", {'username': 'wrong', 'password': self.password})
         ]
 
         for message, data in cases:
